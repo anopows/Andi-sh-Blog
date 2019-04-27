@@ -3,8 +3,8 @@ gems:
   - jemoji
   - jekyll-paginate
 
-url: "https://anopows.github.io" # the base hostname & protocol for your site
-baseurl: "/Andi-sh-Blog"
+url: "http://www.andi.sh" # the base hostname & protocol for your site
+# baseurl: "/Andi-sh-Blog"
 
 # Site settings
 title: "Andi.sh Blog"
