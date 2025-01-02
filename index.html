@@ -1,95 +1,778 @@
----
-layout: default
----
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Productivity Tracker</title>
+    <style>
+        :root {
+            --success-color: #4ade80;
+            --warning-color: #fb923c;
+            --danger-color: #f87171;
+            --grey-color: #9ca3af;
+            --white-color: #ffffff;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f3f4f6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #1f2937;
+        }
+        .header-controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .month-selector,
+        .data-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 8px 16px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #f9fafb;
+        }
 
-<div class="teaserimage">
-    <div class="teaserimage-image" {% if site.cover %}style="background-image: url({{ site.cover | prepend: site.baseurl }})"{% endif %}>
-        Teaser Image
+        /* Settings dropdown */
+        .settings-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .settings-button {
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+        .settings-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #fff;
+            min-width: 200px;
+            box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+            z-index: 10;
+        }
+        .settings-dropdown:hover .settings-content {
+            display: block;
+        }
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        /* Calendar structure */
+        .calendar {
+            display: grid;
+            gap: 1px;
+            background: #e5e7eb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .calendar-header {
+            background: #f3f4f6;
+            padding: 12px;
+            font-weight: 600;
+            text-align: center;
+            color: #4b5563;
+        }
+        .cw-header {
+            grid-column: 1;
+            background: #f3f4f6;
+            padding: 12px;
+            font-weight: 600;
+            color: #4b5563;
+            text-align: center;
+        }
+        /* CW colors */
+        .cw-cell {
+            background: white;
+            padding: 12px;
+            text-align: center;
+            color: #6b7280;
+        }
+        .cw-cell.success {
+            background: var(--success-color);
+            color: #064e3b;
+        }
+        .cw-cell.warning {
+            background: var(--warning-color);
+            color: #7c2d12;
+        }
+        .cw-cell.danger {
+            background: var(--danger-color);
+            color: #7f1d1d;
+        }
+        .cw-cell.grey {
+            background: var(--grey-color);
+            color: #1f2937;
+        }
+        .cw-cell.white {
+            background: var(--white-color);
+            color: #111827;
+        }
+
+        /* Day cell */
+        .calendar-day {
+            background: white;
+            min-height: 100px;
+            padding: 8px;
+            position: relative;
+        }
+        .day-number {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 14px;
+            color: #6b7280;
+            cursor: pointer;
+        }
+        .day-content {
+            margin-top: 24px;
+        }
+        .has-note {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background: #3b82f6;
+            border-radius: 50%;
+        }
+
+        /* Bottom-left total */
+        .day-total {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        /* hour toggle buttons for last 5 hours */
+        .hour-toggle-button {
+            display: inline-block;
+            margin: 2px;
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #fff;
+        }
+        .hour-toggle-button.active {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #2563eb;
+        }
+
+        /* Colors if success/warning/danger are used for day cells */
+        .success {
+            background: var(--success-color);
+            color: #064e3b;
+        }
+        .warning {
+            background: var(--warning-color);
+            color: #7c2d12;
+        }
+        .danger {
+            background: var(--danger-color);
+            color: #7f1d1d;
+        }
+        .grey {
+            background: var(--grey-color);
+            color: #1f2937;
+        }
+        .white {
+            background: var(--white-color);
+            color: #111827;
+        }
+
+        /* Modal (for typed hours) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 90%;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .typed-hours-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+
+        /* CHANGED: Larger notes area, with extra margin on top. */
+        #dayNotes {
+            margin-top: 20px;  /* Separation from hours text above */
+            width: 100%;
+            min-height: 200px; /* bigger default height */
+            font-size: 14px;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Productivity Tracker</h1>
+        <div class="header-controls">
+            <div class="month-selector">
+                <button id="prevMonth">←</button>
+                <span id="currentMonth">January 2025</span>
+                <button id="nextMonth">→</button>
+            </div>
+            <div class="data-controls">
+                <div class="settings-dropdown">
+                    <button class="settings-button">⋯</button>
+                    <div class="settings-content">
+                        <div class="settings-item">
+                            <label for="toggleWeekends">Show Weekends</label>
+                            <input type="checkbox" id="toggleWeekends" />
+                        </div>
+                        <div class="settings-item">
+                            <label for="startDate">Start Date</label>
+                            <input type="date" id="startDate" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="calendar" id="calendar"></div>
+</div>
+
+<!-- Day Modal -->
+<div class="modal" id="dayModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalDate">January 16, 2025</h2>
+            <button class="close-modal" id="closeDayModal">×</button>
+        </div>
+        <!-- CHANGED: Removed text "Enter or Esc closes this popup" -->
+        <input
+                type="text"
+                id="typedHoursInput"
+                class="typed-hours-input"
+                placeholder="Type hours or ranges (e.g. 9-12,14-17,21)"
+        />
+        <textarea id="dayNotes" placeholder="Add notes for this day"></textarea>
     </div>
 </div>
 
-<header class="blog-header">
-    {% if site.logo %}
-      <a class="blog-logo" href="{{site.url}}{{site.baseurl}}" style="background-image: url('{{ site.logo | prepend: site.baseurl }}')">{{ site.title }}</a>
-    {% endif %}
-    <h1 class="blog-title">{{ site.title }}</h1>
-    <h2 class="blog-description">{{ site.description }}</h2>
-    <div class="custom-links">
-      {% for social in site.social %}
-        {% if social.url %}
-            <a class="icon-{{ social.icon }}" href="{{ social.url }}" {% if social.desc %} title="{{ social.desc }}"{% endif %}">
-              <i class="fa fa-{{ social.icon }}"></i>
-            </a>
-            &nbsp;&nbsp;·&nbsp;&nbsp;
-        {% endif %}
-      {% endfor %}
-      <a href={{ "/about/" | prepend: site.baseurl }}>About</a>
-    </div>
-</header>
+<script>
+    // By default, CURRENT_DATE = "today"
+    // If you want to test a fixed date, define CUSTOM_CURRENT_DATE globally
+    var CURRENT_DATE = (typeof CUSTOM_CURRENT_DATE !== 'undefined')
+        ? CUSTOM_CURRENT_DATE
+        : new Date();
 
+    var START_DATE = new Date('2025-01-01');
+    var showWeekends = false;
 
-<main class="content" role="main">
+    var currentMonth = CURRENT_DATE.getMonth();
+    var currentYear = CURRENT_DATE.getFullYear();
 
-    {% if site.tags.featured %}
-    <h5 class="index-headline featured"><span>Featured</span></h5>
+    // Data structure (default)
+    var productivityData = {
+        hours: {},         // e.g. {"2025-01-16-09": "success"}
+        greyedOutDays: [],
+        notes: {}
+    };
 
-    <div class="container featured">
-      {% for post in site.tags.featured %}
-        <article class="post" itemscope itemtype="http://schema.org/BlogPosting" role="article">
-          <div class="article-item">
-            <header class="post-header">
-              <h2 class="post-title" itemprop="name"><a href="{{ post.url | prepend: site.baseurl }}" itemprop="url">{{ post.title }}</a></h2>
-            </header>
-            <section class="post-excerpt" itemprop="description">
-              <p>{{ post.content | strip_html | truncatewords: 50 }}</p>
-            </section>
-            <div class="post-meta">
-              <time datetime="{{ post.date | date_to_long_string }}">{{ post.date | date_to_long_string }}</time>
-  <!--            <span class="post-tags-set">on {{#foreach tags}}<span class="post-tag-{{slug}}">{{#if @first}}{{else}}, {{/if}}<a href="/tag/{{slug}}">{{name}}</a></span>{{/foreach}}</span>-->
-            </div>
-          </div>
-        </article>
-      {% endfor %}
-    </div>
+    // Attempt to load from local storage if available
+    var savedData = localStorage.getItem('productivityData');
+    if (savedData) {
+        try {
+            var parsedData = JSON.parse(savedData);
+            if (parsedData && typeof parsedData === 'object') {
+                productivityData = parsedData;
+            }
+        } catch (e) {
+            console.error('Failed to parse productivityData from localStorage', e);
+        }
+    }
 
-    <h5 class="index-headline normal"><span>Regular</span></h5>
-    {% endif %}
+    // Helper function to save data to local storage
+    function saveData() {
+        localStorage.setItem('productivityData', JSON.stringify(productivityData));
+    }
 
-    <div class="cf frame">
-      {% for post in paginator.posts %}
-        <article class="post" itemscope itemtype="http://schema.org/BlogPosting" role="article">
-          <div class="article-item">
-            <header class="post-header">
-              <h2 class="post-title" itemprop="name"><a href="{{ post.url | prepend: site.baseurl }}" itemprop="url">{{ post.title }}</a></h2>
-            </header>
-            <section class="post-excerpt" itemprop="description">
-              <p>{{ post.excerpt | strip_html | truncatewords: 50 }}</p>
-            </section>
-            <div class="post-meta">
-              <time datetime="{{ post.date | date_to_long_string }}">{{ post.date | date_to_long_string }}</time>
-<!--            <span class="post-tags-set">on {{#foreach tags}}<span class="post-tag-{{slug}}">{{#if @first}}{{else}}, {{/if}}<a href="/tag/{{slug}}">{{name}}</a></span>{{/foreach}}</span>-->
-            </div>
-          </div>
-        </article>
-      {% endfor %}
-    </div>
+    var selectedDate = null;
 
-    <nav class="pagination" role="navigation">
-      {% if paginator.next_page %}
-        <a class="newer-posts" href={{ "/page" | prepend: site.baseurl | append: paginator.next_page }}>&larr; Older posts</a>
-      {% endif %}
-      <span class="page-number">Page {{ paginator.page }} of {{ paginator.total_pages }}</span>
-      {% if paginator.previous_page %}
-        {% if paginator.page == 2 %}
-          <a class="older-posts" href={{ "/" | prepend: site.baseurl }}>Newer posts &rarr;</a>
-        {% else %}
-          <a class="older-posts" href={{ "/page" | prepend: site.baseurl | append: paginator.previous_page }}>Newer posts &rarr;</a>
-        {% endif %}
-      {% endif %}
-    </nav>
+    // HELPER FUNCTIONS
+    function formatDate(date) {
+        var y = date.getFullYear();
+        var m = String(date.getMonth()+1).padStart(2,'0');
+        var d = String(date.getDate()).padStart(2,'0');
+        return y+'-'+m+'-'+d;
+    }
+    function getISODayOfWeek(date) {
+        var day = date.getDay();
+        return (day===0)? 7 : day;
+    }
+    function getWeekNumber(date) {
+        var tmp = new Date(date.valueOf());
+        var dayNr = (getISODayOfWeek(tmp)+6)%7;
+        tmp.setDate(tmp.getDate() - dayNr + 3);
+        var firstThu = tmp.valueOf();
+        tmp.setMonth(0,1);
+        if (getISODayOfWeek(tmp)!==4) {
+            tmp.setDate(tmp.getDate()+((4-getISODayOfWeek(tmp))+7)%7);
+        }
+        return 1 + Math.floor((firstThu - tmp.valueOf())/604800000);
+    }
 
+    function isDangerDay(date) {
+        if (date >= CURRENT_DATE) return false;
+        if (date.getDay()===0 || date.getDay()===6) return false;
+        var dateStr = formatDate(date);
+        if (productivityData.greyedOutDays.indexOf(dateStr)!==-1) return false;
+        if (date < START_DATE) return false;
+        var totalHours = Object.keys(productivityData.hours)
+            .filter(function(k){return k.startsWith(dateStr);}).length;
+        return (totalHours<5);
+    }
 
-    <!-- {{!! After all the posts, we have the previous/next pagination links }}
-    {{pagination}} -->
+    // Return day cell color
+    function getDayStatus(date) {
+        var dateStr = formatDate(date);
+        if (productivityData.greyedOutDays.indexOf(dateStr)!==-1 || date<START_DATE) {
+            return 'grey';
+        }
+        if ((date.getDay()===0 || date.getDay()===6) && showWeekends) {
+            return 'grey';
+        }
+        var totalHours = Object.keys(productivityData.hours)
+            .filter(function(k){return k.startsWith(dateStr);}).length;
+        if (date < CURRENT_DATE) {
+            return totalHours>=5 ? 'success' : 'danger';
+        }
+        // If it's in the future => 'white' or '' ?
+        // Typically we used '' if <5 hours. Let’s keep it blank for normal.
+        return (totalHours>=5)? 'success' : '';
+    }
 
-</main>
+    // Return CW color
+    // CHANGED: If the week has *any* "white" day => entire CW is "white"
+    function getWeekStatus(weekStart) {
+        var mon = new Date(weekStart);
+        var fri = new Date(weekStart);
+        fri.setDate(fri.getDate()+4);
+
+        if (fri<START_DATE) return 'grey';
+
+        var dangerCount=0, greyCount=0, workCount=0;
+        var hasFutureDay = false;
+
+        var tmp = new Date(mon);
+        while(tmp<=fri) {
+            if (tmp.getDay()!==0 && tmp.getDay()!==6) {
+                workCount++;
+                var ds = getDayStatus(tmp);
+                if (ds==='grey') {
+                    greyCount++;
+                } else if (ds==='danger') {
+                    dangerCount++;
+                } else if (ds==='' || ds==='white') {
+                    hasFutureDay = true;
+                }
+            }
+            tmp.setDate(tmp.getDate()+1);
+        }
+
+        if (hasFutureDay) return 'white';
+        if (mon>CURRENT_DATE) return 'white';
+        if (greyCount===workCount && workCount>0) return 'grey';
+        if (dangerCount>=2) return 'danger';
+        if (dangerCount===1) return 'warning';
+        return 'success';
+    }
+
+    function renderCalendar() {
+        var calEl = document.getElementById('calendar');
+        calEl.innerHTML='';
+
+        var daysOfWeek = ['Mon','Tue','Wed','Thu','Fri'];
+        if (showWeekends) daysOfWeek = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        var totalCols = showWeekends? 7:5;
+        calEl.style.gridTemplateColumns='auto repeat('+totalCols+',1fr)';
+
+        // CW header
+        var cwHeader = document.createElement('div');
+        cwHeader.className='cw-header';
+        cwHeader.textContent='CW';
+        calEl.appendChild(cwHeader);
+
+        // day-of-week headers
+        daysOfWeek.forEach(function(d){
+            var hd = document.createElement('div');
+            hd.className='calendar-header';
+            hd.textContent = d;
+            calEl.appendChild(hd);
+        });
+
+        var firstOfMonth = new Date(currentYear, currentMonth,1);
+        var startDOW = getISODayOfWeek(firstOfMonth);
+        firstOfMonth.setDate(firstOfMonth.getDate()-(startDOW-1));
+
+        var lastOfMonth = new Date(currentYear,currentMonth+1,0);
+        var endDOW = getISODayOfWeek(lastOfMonth);
+        lastOfMonth.setDate(lastOfMonth.getDate()+(7-endDOW));
+
+        var iterDate = new Date(firstOfMonth);
+
+        while(iterDate<=lastOfMonth) {
+            // If Monday => CW cell
+            if (getISODayOfWeek(iterDate)===1) {
+                var cwCell = document.createElement('div');
+                cwCell.className='cw-cell';
+                var wStatus = getWeekStatus(iterDate);
+                if (wStatus) cwCell.classList.add(wStatus);
+                cwCell.textContent = getWeekNumber(iterDate);
+                calEl.appendChild(cwCell);
+            }
+
+            if (!showWeekends && (iterDate.getDay()===0 || iterDate.getDay()===6)) {
+                iterDate.setDate(iterDate.getDate()+1);
+                continue;
+            }
+
+            var cellDate = new Date(iterDate);
+            var dateStr = formatDate(cellDate);
+            var dayCell = document.createElement('div');
+            dayCell.className='calendar-day';
+            var status = getDayStatus(cellDate);
+            if (status) dayCell.classList.add(status);
+
+            // Day number (top-right)
+            var dayNumber = document.createElement('div');
+            dayNumber.className='day-number';
+            dayNumber.textContent=String(cellDate.getDate());
+            dayNumber.onclick=(function(ds){
+                return function(e){
+                    e.stopPropagation();
+                    toggleGreyedOut(ds);
+                };
+            })(dateStr);
+            dayCell.appendChild(dayNumber);
+
+            // If in current month
+            if (cellDate.getMonth()===currentMonth) {
+                var dayContent = document.createElement('div');
+                dayContent.className='day-content';
+
+                // If not grey => we show content
+                if (status!=='grey') {
+                    // Show last 5 hours for the current day => from (nowHour) down to (nowHour-4)
+                    if (formatDate(cellDate)===formatDate(CURRENT_DATE)) {
+                        var nowHour = (new Date()).getHours();
+                        var hoursToShow = [];
+                        for (var h=0; h<5; h++){
+                            var hrVal = nowHour - (4 - h);
+                            if (hrVal>=0 && hrVal<24) hoursToShow.push(hrVal);
+                        }
+                        hoursToShow.sort(function(a,b){return a-b;});
+
+                        hoursToShow.forEach(function(hr){
+                            var hrBtn = document.createElement('button');
+                            hrBtn.className='hour-toggle-button';
+                            hrBtn.textContent = hr+':00';
+                            var hrKey = dateStr+'-'+String(hr).padStart(2,'0');
+                            if (productivityData.hours[hrKey]) {
+                                hrBtn.classList.add('active');
+                            }
+                            hrBtn.onclick = function(e){
+                                e.stopPropagation();
+                                toggleHour(hrKey);
+                            };
+                            dayContent.appendChild(hrBtn);
+                        });
+                    }
+                }
+
+                // If user has notes, show the dot
+                if (productivityData.notes[dateStr]) {
+                    var noteIndicator = document.createElement('div');
+                    noteIndicator.className='has-note';
+                    dayCell.appendChild(noteIndicator);
+                }
+                dayCell.appendChild(dayContent);
+
+                // day is clickable if <= current day and not grey => opens popup
+                if (cellDate<=CURRENT_DATE && status!=='grey') {
+                    dayCell.onclick = (function(dObj){
+                        return function(){
+                            openDayModal(dObj);
+                        };
+                    })(cellDate);
+                }
+
+                // BOTTOM-LEFT total
+                if (status!=='grey') {
+                    var totalHours = Object.keys(productivityData.hours)
+                        .filter(function(k){return k.startsWith(dateStr);}).length;
+                    var dayTotal = document.createElement('div');
+                    dayTotal.className='day-total';
+                    dayTotal.textContent = String(totalHours);
+                    dayCell.appendChild(dayTotal);
+                }
+            } else {
+                dayCell.classList.add('grey'); // outside month
+            }
+
+            calEl.appendChild(dayCell);
+            iterDate.setDate(iterDate.getDate()+1);
+        }
+
+        var lbl = new Date(currentYear, currentMonth,1)
+            .toLocaleString('default',{month:'long', year:'numeric'});
+        document.getElementById('currentMonth').textContent = lbl;
+    }
+
+    function toggleGreyedOut(dateStr){
+        var idx = productivityData.greyedOutDays.indexOf(dateStr);
+        if (idx===-1) {
+            productivityData.greyedOutDays.push(dateStr);
+        } else {
+            productivityData.greyedOutDays.splice(idx,1);
+        }
+        saveData();          // Save to local storage
+        renderCalendar();
+    }
+
+    // Toggling a single hour key
+    function toggleHour(hKey){
+        if (productivityData.hours[hKey]) {
+            delete productivityData.hours[hKey];
+        } else {
+            productivityData.hours[hKey] = 'success';
+        }
+        saveData();          // Save to local storage
+        renderCalendar();
+    }
+
+    // POPUP
+    function openDayModal(date) {
+        selectedDate = date;
+        var dateStr = formatDate(date);
+
+        var modal = document.getElementById('dayModal');
+        var modalDate = document.getElementById('modalDate');
+        var typedHoursInput = document.getElementById('typedHoursInput');
+        var dayNotes = document.getElementById('dayNotes');
+
+        modalDate.textContent = date.toLocaleDateString('default',{
+            weekday:'long', year:'numeric', month:'long', day:'numeric'
+        });
+        modal.style.display='flex';
+        typedHoursInput.focus();
+
+        // populate typed hours from existing
+        var existingHours = Object.keys(productivityData.hours)
+            .filter(function(k){return k.startsWith(dateStr);})
+            .map(function(k){
+                return parseInt(k.slice(-2),10);
+            })
+            .sort(function(a,b){return a-b;});
+        typedHoursInput.value = existingHours.join(',');
+
+        // notes
+        dayNotes.value = productivityData.notes[dateStr]||'';
+    }
+
+    // parse typed hours (supports ranges like "9-12" => 9,10,11,12)
+    function parseHoursString(str){
+        var results = [];
+        var tokens = str.split(',');
+        tokens.forEach(function(tok){
+            tok = tok.trim();
+            if (!tok) return;
+            if (tok.includes('-')) {
+                var parts = tok.split('-').map(function(x){return parseInt(x,10);});
+                if (parts.length===2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    var startHr = Math.min(parts[0], parts[1]);
+                    var endHr = Math.max(parts[0], parts[1]);
+                    for (var h=startHr; h<=endHr; h++){
+                        if (h>=0 && h<24) results.push(h);
+                    }
+                }
+            } else {
+                var hourVal = parseInt(tok,10);
+                if (!isNaN(hourVal) && hourVal>=0 && hourVal<24) {
+                    results.push(hourVal);
+                }
+            }
+        });
+        // remove duplicates
+        results = [...new Set(results)];
+        // sort ascending
+        results.sort(function(a,b){return a-b;});
+        return results;
+    }
+
+    // typed hours => updated automatically
+    document.getElementById('typedHoursInput').addEventListener('input', function(){
+        if (!selectedDate) return;
+        var dateStr = formatDate(selectedDate);
+
+        // Remove old hours for this day
+        Object.keys(productivityData.hours).forEach(function(k){
+            if (k.startsWith(dateStr)) delete productivityData.hours[k];
+        });
+
+        // parse new hours
+        var hoursList = parseHoursString(this.value);
+        hoursList.forEach(function(h){
+            var hKey = dateStr+'-'+String(h).padStart(2,'0');
+            productivityData.hours[hKey] = 'success';
+        });
+
+        saveData();        // Save to local storage
+        renderCalendar();
+    });
+
+    // Enter/Esc => close
+    document.getElementById('typedHoursInput').addEventListener('keydown', function(ev){
+        if (ev.key==='Enter' || ev.key==='Escape') {
+            closeModal();
+        }
+    });
+    document.getElementById('dayNotes').addEventListener('keydown', function(ev){
+        if (ev.key==='Enter' || ev.key==='Escape') {
+            closeModal();
+        }
+    });
+
+    // close "X"
+    document.getElementById('closeDayModal').onclick=function(){
+        closeModal();
+    };
+    function closeModal(){
+        document.getElementById('dayModal').style.display='none';
+    }
+
+    // saving notes on blur
+    document.getElementById('dayNotes').addEventListener('blur', function(){
+        if (!selectedDate) return;
+        var dateStr = formatDate(selectedDate);
+        var val = this.value.trim();
+        if (val) {
+            productivityData.notes[dateStr] = val;
+        } else {
+            delete productivityData.notes[dateStr];
+        }
+        saveData();         // Save to local storage
+        renderCalendar();
+    });
+
+    // outside click => close
+    window.addEventListener('click', function(e){
+        var modal = document.getElementById('dayModal');
+        if (e.target===modal) {
+            closeModal();
+        }
+    });
+
+    // Month nav
+    document.getElementById('prevMonth').onclick=function(){
+        if (currentMonth===0) {
+            currentMonth=11; currentYear--;
+        } else {
+            currentMonth--;
+        }
+        renderCalendar();
+    };
+    document.getElementById('nextMonth').onclick=function(){
+        if (currentMonth===11) {
+            currentMonth=0; currentYear++;
+        } else {
+            currentMonth++;
+        }
+        renderCalendar();
+    };
+
+    // Show/hide weekends
+    document.getElementById('toggleWeekends').onchange=function(e){
+        showWeekends=e.target.checked;
+        renderCalendar();
+    };
+    // Start date
+    document.getElementById('startDate').onchange=function(e){
+        if (e.target.value) {
+            START_DATE = new Date(e.target.value);
+        }
+        renderCalendar();
+    };
+
+    // Init
+    document.getElementById('toggleWeekends').checked = showWeekends;
+    document.getElementById('startDate').value = '2025-01-01';
+    renderCalendar();
+</script>
+</body>
+</html>
