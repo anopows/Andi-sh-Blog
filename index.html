@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <!-- Viewport for mobile responsiveness -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Productivity Tracker</title>
     <style>
         :root {
@@ -11,12 +13,14 @@
             --grey-color: #9ca3af;
             --white-color: #ffffff;
         }
+
         body {
             font-family: system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 20px;
             background: #f3f4f6;
         }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -25,6 +29,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             padding: 20px;
         }
+
         .header {
             display: flex;
             justify-content: space-between;
@@ -33,22 +38,26 @@
             padding-bottom: 20px;
             border-bottom: 1px solid #e5e7eb;
         }
+
         .header h1 {
             margin: 0;
             font-size: 24px;
             color: #1f2937;
         }
+
         .header-controls {
             display: flex;
             gap: 20px;
             align-items: center;
         }
+
         .month-selector,
         .data-controls {
             display: flex;
             gap: 10px;
             align-items: center;
         }
+
         button {
             padding: 8px 16px;
             border: 1px solid #d1d5db;
@@ -115,6 +124,7 @@
             color: #4b5563;
             text-align: center;
         }
+
         /* CW colors */
         .cw-cell {
             background: white;
@@ -274,6 +284,53 @@
             border-radius: 6px;
             resize: vertical;
         }
+
+        /*
+         * RESPONSIVE STYLES
+         * Adjust layout for small screens
+         */
+        @media (max-width: 768px) {
+            /* Reduce padding around the container */
+            body {
+                padding: 10px;
+            }
+            .container {
+                max-width: 100%;
+                padding: 10px;
+            }
+            /* Stack header elements vertically */
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .header-controls {
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 10px;
+            }
+            .month-selector,
+            .data-controls {
+                flex-wrap: wrap;
+            }
+            /* Make the calendar horizontally scrollable to preserve grid structure */
+            .calendar {
+                display: grid;
+                /* Fix min-width so user can scroll horizontally if needed */
+                min-width: 600px;
+                /* You can adjust min-width if you want fewer columns to show on mobile. */
+                overflow-x: auto;
+            }
+            /* Optionally reduce the default min-height of day cells */
+            .calendar-day {
+                min-height: 80px;
+            }
+            /* Make day-number a bit smaller on mobile */
+            .day-number {
+                font-size: 12px;
+            }
+            /* If you want to hide the "CW" column on very narrow screens, you can do: */
+            /* .cw-header, .cw-cell { display: none; } */
+        }
     </style>
 </head>
 <body>
@@ -298,6 +355,15 @@
                             <label for="startDate">Start Date</label>
                             <input type="date" id="startDate" />
                         </div>
+                        <!-- NEW: Import/Export settings -->
+                        <div class="settings-item">
+                            <button id="exportDataBtn">Export Data</button>
+                        </div>
+                        <div class="settings-item" style="flex-direction: column; align-items: flex-start;">
+                            <label for="importDataFile">Import Data</label>
+                            <input type="file" id="importDataFile" accept=".json"/>
+                        </div>
+                        <!-- END NEW -->
                     </div>
                 </div>
             </div>
@@ -413,7 +479,6 @@
             return totalHours>=5 ? 'success' : 'danger';
         }
         // If it's in the future => 'white' or '' ?
-        // Typically we used '' if <5 hours. Let’s keep it blank for normal.
         return (totalHours>=5)? 'success' : '';
     }
 
@@ -601,7 +666,7 @@
         } else {
             productivityData.greyedOutDays.splice(idx,1);
         }
-        saveData();          // Save to local storage
+        saveData();
         renderCalendar();
     }
 
@@ -612,7 +677,7 @@
         } else {
             productivityData.hours[hKey] = 'success';
         }
-        saveData();          // Save to local storage
+        saveData();
         renderCalendar();
     }
 
@@ -692,7 +757,7 @@
             productivityData.hours[hKey] = 'success';
         });
 
-        saveData();        // Save to local storage
+        saveData();
         renderCalendar();
     });
 
@@ -726,7 +791,7 @@
         } else {
             delete productivityData.notes[dateStr];
         }
-        saveData();         // Save to local storage
+        saveData();
         renderCalendar();
     });
 
@@ -767,6 +832,46 @@
             START_DATE = new Date(e.target.value);
         }
         renderCalendar();
+    };
+
+    // EXPORT data
+    document.getElementById('exportDataBtn').onclick = function() {
+        var dataStr = JSON.stringify(productivityData, null, 2);
+        var blob = new Blob([dataStr], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'productivity_data.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    // IMPORT data
+    document.getElementById('importDataFile').onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                var importedData = JSON.parse(evt.target.result);
+                if (importedData && typeof importedData === 'object') {
+                    productivityData = importedData;
+                    saveData();
+                    renderCalendar();
+                } else {
+                    alert('Invalid JSON structure.');
+                }
+            } catch (err) {
+                alert('Invalid JSON file.');
+            }
+            // Clear the file input
+            e.target.value = '';
+        };
+        reader.readAsText(file);
     };
 
     // Init
